@@ -24,7 +24,7 @@ percent_of_complaints %>% ggplot(aes(x = rank, y = quan_cumsum,fill = quan_cumsu
   scale_x_continuous(breaks = seq(1,10,by = 1)) + scale_y_continuous(name = 'Percent of Complaints', labels = percent)
 
 #complaints_outcome <- complaints_data %>% group_by(Allegation) %>% summarize(num_of_type = n()) %>%
-  arrange(num_of_type) %>% mutate(rank = row_number())
+  #(num_of_type) %>% mutate(rank = row_number())
 
 #complaints_outcome %>% ggplot(aes(x= rank, y= num_of_type)) + geom_line()
 
