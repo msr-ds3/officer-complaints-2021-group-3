@@ -1,0 +1,99 @@
+---
+title: "Final Project- Group 3"
+author: "Anthony Vallejo & Vanessa Johnson"
+date: "6/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(scales)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+
+
+
+#reading in complaints_data
+complaints_data <- read_csv("CCRB%20Complaint%20Database%20Raw%2004.20.2021.csv")
+
+
+#nypd data that separates the allegations into different deciles to show how many incidents
+#officers have
+complaints_data_sorted <- complaints_data %>% group_by(ComplaintID,OfficerID)%>%summarize(num_incidents = n())
+df2 <- complaints_data_sorted %>% group_by(OfficerID) %>% summarize(num_complaints = n())
+
+df2 <- df2 %>% arrange(num_complaints) %>%
+  mutate(complain_sum = cumsum(num_complaints)/sum(num_complaints))
+  
+complaints_and_cumsum <- df2 %>%
+  summarize(quan_num_complaints = quantile(num_complaints, probs = seq(0,1, 0.1)),quan_cumsum = quantile(complain_sum, probs = seq(0,1, 0.1)) )
+
+
+percent_of_complaints <- data.frame(diff(as.matrix(complaints_and_cumsum)))
+percent_of_complaints <- percent_of_complaints %>% mutate(rank = row_number())
+
+
+#question: How did the FADOType change over the years
+#making a new column for the year
+complaints_data_by_year <- complaints_data %>% 
+  mutate(year = as.numeric(format(parse_date(complaints_data$IncidentDate,format = "%m/%d/%Y"),"%Y")))
+
+#group by year and type of allegation and filter by year and type
+complaints_FADOType <- complaints_data_by_year %>% group_by(year, FADOType) %>% summarize(Times = n()) %>% 
+ arrange(year) %>% filter(year >=2006) %>% filter(FADOType != "Untruthful Statement")
+
+
+
+#percent of abuse of allegations in each decile of officers
+#seeing how many of the allegations in each decile is labeled as Force
+abuse_allegations <- complaints_data %>% filter(FADOType == "Force") %>% 
+  group_by(OfficerID, ComplaintID) %>% summarize(num_complaints = n()) %>% group_by(OfficerID) %>%
+  arrange(num_complaints) %>% summarize(com_per_officer = n()) %>% arrange(com_per_officer) %>%
+  mutate(force_complain_sum = cumsum(com_per_officer)/sum(com_per_officer))%>%
+  summarize(force_cum_sum = quantile(force_complain_sum, probs = seq(0,1, 0.1)))
+
+
+percent_of_abuse_complaints <- data.frame(diff(as.matrix(abuse_allegations)))
+percent_of_abuse_complaints <- percent_of_abuse_complaints %>% mutate(rank = row_number())
+
+
+
+
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+#officers percentage of complaints within each decile 
+percent_of_complaints %>% ggplot(aes(x = rank, y = quan_cumsum,fill = quan_cumsum)) + geom_bar(stat = "identity") +
+  scale_x_continuous(breaks = seq(1,10,by = 1)) + scale_y_continuous(name = 'Percent of Complaints', labels = percent) + ggtitle("Percentage of Complaints per Group of Officers")
+#the trajectory of allegation types over time
+complaints_FADOType %>% ggplot(aes(x = year, y = Times,color = FADOType)) + 
+  geom_line() + theme(axis.text.x = element_text(angle = 90)) + 
+  scale_x_continuous(breaks = seq(2006,2021,by = 1)) + geom_point() + ggtitle("Police Complaints Since 2006")
+
+#officers percentage of force complaints within each decile
+percent_of_abuse_complaints %>% ggplot(aes(x = rank, y = force_cum_sum,fill = force_cum_sum)) + geom_bar(stat = "identity") +
+  scale_x_continuous(breaks = seq(1,10,by = 1)) + scale_y_continuous(name = 'Percent of Force Complaints', labels = percent) + ggtitle("Force Complaints per Group of Officers")
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+
